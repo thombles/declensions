@@ -1,0 +1,20 @@
+<html>
+    <head>
+        <title>Russian Declension-o-matic</title>
+        <script src="ru_declensions.js" type="text/javascript"></script>
+        <meta charset="UTF-8">
+    </head>
+
+    <body>
+        <h1>Russian Declension-o-matic</h1>
+        <p>Enter a Russian word. This tool will try to locate the corresponding declensions table on English Wiktionary. <a href="https://github.com/thombles/declensions">Code and Documentation</a></p>
+        <form onSubmit="return doSearch()">
+            <input id="search_term" type="text" placeholder="слово">
+            <input type="submit" value="Search">
+        </form>
+        <p id="status" style="font-style: italic">No search in progress.</p>
+        <div id="results" style="max-width: 800px">
+
+        </div>
+    </body>
+</html>

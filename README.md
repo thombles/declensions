@@ -1,5 +1,5 @@
 # declensions
-Russian Declension-o-matic - quickly locate declension tables for Russian words on Wiktionary
+Russian Declension-o-matic - quickly locate declension and conjugation tables for Russian words on Wiktionary
 
 Hosted version: [https://thomask.sdf.org/ru-declensions/](https://thomask.sdf.org/ru-declensions/)
 

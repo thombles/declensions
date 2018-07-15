@@ -66,10 +66,14 @@ function handleDefinitionPage(json) {
     const text = json.parse.text["*"];
     
     // Invoke Zalgo. The <center> cannot hold
-    const decIndex = text.indexOf('Declension of <b lang="ru" class="Cyrl">');
-    if (decIndex != -1) {
+    var index = text.indexOf('Declension of <b lang="ru" class="Cyrl">');
+    if (index == -1) {
+        index = text.indexOf('Conjugation of <span lang="ru" class="Cyrl">');
+    }
+
+    if (index != -1) {
         // Plan A: We have a declension table right here
-        const remainder = text.substring(decIndex);
+        const remainder = text.substring(index);
         const tableStart = remainder.indexOf("<table");
         const tableEnd = remainder.indexOf("</table>");
         const tableHtml = remainder.substring(tableStart, tableEnd + 8);

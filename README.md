@@ -1,4 +1,5 @@
 # declensions
+
 Russian Declension-o-matic - quickly locate declension and conjugation tables for Russian words on Wiktionary
 
 Hosted version: [https://thomask.sdf.org/ru-declensions/](https://thomask.sdf.org/ru-declensions/)
@@ -9,5 +10,4 @@ The algorithm to locate the tables is pretty dodgy and may break. If you notice 
 
 ## Licensing
 
-This code is distributed according to the Unlicence (see LICENCE), *except* for the Levenshtein distance algorithm, which is included under the MIT licence. See the bottom section of ru_declensions.js.
-
+This project is distributed under the MIT licence and incorporates third-party code. For the full licence conditions please refer to the header of `ru_declensions.htm`.

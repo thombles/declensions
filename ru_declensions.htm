@@ -123,6 +123,23 @@ Changelog:
 
         const TITLE = "Russian Declension-o-matic";
 
+        window.onload = function() {
+            var initialTerm = null;
+            const queryMatch = window.location.href.match(/\?q=([^#]+)/);
+            // Look for ?q=слово
+            if (queryMatch) {
+                initialTerm = decodeURIComponent(queryMatch[1]);
+            }
+            // Look for #слово (doesn't hurt to have options)
+            if (window.location.hash) {
+                initialTerm = decodeURIComponent(window.location.hash.substr(1));
+            }
+            if (initialTerm) {
+                document.getElementById("search_term").value = initialTerm;
+                doSearch();
+            }
+        }
+
         // User pressed the Search button. Run a search query against Wiktionary and suppress form submission.
         function doSearch() {
             clearResults();

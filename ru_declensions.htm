@@ -120,8 +120,14 @@ Changelog:
         const ST_DONE = "Done.";
         const ST_NOT_FOUND = "Couldn't locate a declension table for that word. :(";
         const ST_ERROR = "Sorry, an error occurred.";
-
         const TITLE = "Russian Declension-o-matic";
+
+        // Caches that will last for the lifetime of this page
+        // This will neatly handle repeated lookups if the user navigates тут и там
+        // But any issues can be fixed with a refresh
+        var queryId = 0; // maintain consistency across JSONP requests. A bit ugly but it'll work.
+        var searchCache = {};
+        var pageCache = {};
 
         window.onload = function() {
             var initialTerm = null;
@@ -149,16 +155,32 @@ Changelog:
             }
             updateStatusText(ST_INITIAL_SEARCH + term);
             updatePageTitle(term);
-            runWiktionaryApi(makeSearchApiUrl(term, "handleSearchResults"));
+
+            // Use the cache if possible
+            if (searchCache[term]) {
+                handleSearchResults(searchCache[term], term);
+                return false;
+            }
+            
+            // Make a handler for this query
+            const queryHandler = `handleSearchResults${++queryId}`;
+            window[queryHandler] = function(json) {
+                handleSearchResults(json, term);
+            }
+
+            runWiktionaryApi(makeSearchApiUrl(term, queryHandler));
             return false;
         }
 
-        function handleSearchResults(json) {
+        function handleSearchResults(json, term) {
             // See if we got a page. Not watertight but it'll do.
             if (!json.query || !json.query.search ) {
                 error();
                 return;
             }
+
+            // We seem to have a result so save it for later
+            searchCache[term] = json;
 
             // Filter out any that have spaces in them. Multi-word phrases can mess up our results.
             const results = json.query.search.filter(function(r) {
@@ -187,16 +209,22 @@ Changelog:
 
             // Use the top result out of whatever are left
             const title = results[bestResult].title;
-            const url = makeGetPageUrl(title, "handleDefinitionPage");
-            updateStatusText(ST_DEFINITION + " " + title);
-            runWiktionaryApi(url);
+            requestDefinitionPage(title);
         }
 
         // We have the content of the definition page
         // This _might_ contain the table we want directly.
         // Often it's a short linker page "1. genitive singular of сло́во"
         // In this case we want to follow that link.
-        function handleDefinitionPage(json) {
+        function handleDefinitionPage(json, term) {
+            if (!json || !json.parse || !json.parse.text) {
+                error();
+                return;
+            }
+
+            // We have a result so let's cache it
+            pageCache[term] = json;
+
             const text = json.parse.text["*"];
             
             // Invoke Zalgo. The <center> cannot hold
@@ -219,14 +247,32 @@ Changelog:
                 // Just take the first one
                 const redirects = text.match(/<span class="form-of-definition-link"><i class="Cyrl mention" lang="ru"><a href="\/wiki\/([^#]+)/);
                 if (redirects && redirects.length > 0) {
-                    const url = makeGetPageUrl(redirects[1], "handleDefinitionPage");
-                    updateStatusText(ST_DEFINITION + " " + decodeURIComponent(redirects[1]));
-                    runWiktionaryApi(url);
+                    requestDefinitionPage(redirects[1]);
                 } else {
                     // We have actually failed
                     updateStatusText(ST_NOT_FOUND);
                 }
             }
+        }
+
+        function requestDefinitionPage(title) {
+            title = decodeURIComponent(title);
+
+            // Use cache if possible
+            if (pageCache[title]) {
+                handleDefinitionPage(pageCache[title], title);
+                return;
+            }
+
+            // Make a function to catch this specific query
+            const queryHandler = `handleDefinitionPage${++queryId}`;
+            window[queryHandler] = function(json) {
+                handleDefinitionPage(json, title);
+            }
+
+            const url = makeGetPageUrl(title, queryHandler);
+            updateStatusText(ST_DEFINITION + " " + title);
+            runWiktionaryApi(url);
         }
 
         // We found the declensions table we're looking for. Take the HTML and show it to the user.

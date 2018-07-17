@@ -88,6 +88,9 @@ Changelog:
             #results td.match {
                 background-color: rgb(255, 177, 177);
             }
+            #results caption {
+                display: none;
+            }
             span.Latn {
                 font-size: 0.8em; /* transliterations */
             }
@@ -249,10 +252,11 @@ Changelog:
         // Try to find and highlight the term we searched for, ignoring emphasis accents
         function highlightSearchTerm() {
             const ruSpans = document.getElementsByClassName("Cyrl");
-            const term = getSearchTerm().normalize('NFD');
+            // Double dots are often omitted on Russian "ё" so treat it the same as "е"
+            const term = getSearchTerm().replace("ё", "е").normalize('NFD');
             for (var i = 0; i < ruSpans.length; i++) {
                 const s = ruSpans[i];
-                const content = s.innerText.trim();
+                const content = s.innerText.trim().replace("ё", "е");
                 const normalised = content.normalize('NFD');
                 const noAccent = normalised.replace(/\u0301/g, "");
                 if (noAccent == term) {

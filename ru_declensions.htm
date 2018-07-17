@@ -130,7 +130,7 @@ Changelog:
         var searchCache = {};
         var pageCache = {};
 
-        window.onload = function() {
+        var hashCheck = function() {
             var initialTerm = null;
             const queryMatch = window.location.href.match(/\?q=([^#]+)/);
             // Look for ?q=слово
@@ -143,12 +143,14 @@ Changelog:
             }
             if (initialTerm) {
                 document.getElementById("search_term").value = initialTerm;
-                doSearch();
+                doSearch(true);
             }
         }
+        window.onload = hashCheck;
+        window.onhashchange = hashCheck;
 
         // User pressed the Search button. Run a search query against Wiktionary and suppress form submission.
-        function doSearch() {
+        function doSearch(suppressHistory) {
             clearResults();
             const term = getSearchTerm();
             if (term.length == 0) {
@@ -156,6 +158,9 @@ Changelog:
             }
             updateStatusText(ST_INITIAL_SEARCH + term);
             updatePageTitle(term);
+            if (!suppressHistory) {
+                history.pushState(null, null, `#${term}`);
+            }
 
             // Use the cache if possible
             if (searchCache[term]) {

@@ -85,6 +85,12 @@ Changelog:
             #results th {
                 background-color: rgb(226, 233, 255);
             }
+            #results td.match {
+                background-color: rgb(255, 177, 177);
+            }
+            span.Latn {
+                font-size: 0.8em; /* transliterations */
+            }
         </style>
     </head>
 
@@ -210,7 +216,9 @@ Changelog:
             // Put it on the page
             const r = document.getElementById("results");
             r.innerHTML = `<p>Wiktionary page: <b><a href="https://en.wiktionary.org/wiki/${title}#Russian">${title}</a></b></p>\n`;
-            r.innerHTML += html;    
+            r.innerHTML += html;
+
+            highlightSearchTerm();
         }
 
         // If we fail provide a link to the raw search results
@@ -236,6 +244,21 @@ Changelog:
             html = html.replace(/background:[^";]+/g, "");
             html = html.replace(/background-color:[^";]+/g, "");
             return html;
+        }
+
+        // Try to find and highlight the term we searched for, ignoring emphasis accents
+        function highlightSearchTerm() {
+            const ruSpans = document.getElementsByClassName("Cyrl");
+            const term = getSearchTerm().normalize('NFD');
+            for (var i = 0; i < ruSpans.length; i++) {
+                const s = ruSpans[i];
+                const content = s.innerText.trim();
+                const normalised = content.normalize('NFD');
+                const noAccent = normalised.replace(/\u0301/g, "");
+                if (noAccent == term) {
+                    s.parentElement.classList.add("match");
+                }
+            }
         }
 
         function getSearchTerm() {

@@ -278,8 +278,9 @@ Changelog:
                 // Plan B: Is this a form of a root word that is documented in another page?
                 // Sometimes there are multiple... often they're different declensions the same root word
                 // Just take the first one
-                const redirects = text.match(/<span class="form-of-definition-link"><i class="Cyrl mention" lang="ru"><a href="\/wiki\/([^#]+)/);
-                if (redirects && redirects.length > 0) {
+                var redirects = text.match(/<span class="form-of-definition-link"><i class="Cyrl mention" lang="ru"><a href="\/wiki\/([^#]+)/) || [];
+                redirects.push(...(text.match(/form[- ]of.*?<span class="Cyrl" lang="ru"><a href="\/wiki\/([^#]+)/) || []))
+                if (redirects.length > 0) {
                     requestDefinitionPage(redirects[1]);
                 } else {
                     // We have actually failed

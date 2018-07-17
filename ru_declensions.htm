@@ -242,18 +242,17 @@ Changelog:
             while (true) {
                 var declIndex = text.indexOf('Declension of <b lang="ru" class="Cyrl">', startIndex+1);
                 var conjIndex = text.indexOf('Conjugation of <span lang="ru" class="Cyrl">', startIndex+1);
+                var pronounIndex = text.indexOf('Declension of Russian personal pronouns', startIndex+1);
                 const bigNum = 100000000;
                 if (declIndex == -1) declIndex = bigNum;
                 if (conjIndex == -1) conjIndex = bigNum;
-                if (declIndex < conjIndex) {
-                    startIndex = declIndex;
-                } else if (conjIndex < declIndex) {
-                    startIndex = conjIndex;
-                } else {
+                if (pronounIndex == -1) pronounIndex = bigNum;
+                startIndex = Math.min(declIndex, conjIndex, pronounIndex);
+                if (startIndex == bigNum) {
                     break;
                 }
                 matchingTableIndices.push(startIndex);
-            };
+            }
             
             // Step 2: Extract the HTML of the corresponding tables
             var matchingTables = [];

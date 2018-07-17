@@ -234,18 +234,44 @@ Changelog:
             const text = json.parse.text["*"];
             
             // Invoke Zalgo. The <center> cannot hold
-            var index = text.indexOf('Declension of <b lang="ru" class="Cyrl">');
-            if (index == -1) {
-                index = text.indexOf('Conjugation of <span lang="ru" class="Cyrl">');
-            }
-
-            if (index != -1) {
-                // Plan A: We have a declension table right here
+            // Step 1: Get an array of offsets after which we should find a promising <table>...</table>
+            var matchingTableIndices = [];
+            var startIndex = 0;
+            while (true) {
+                var declIndex = text.indexOf('Declension of <b lang="ru" class="Cyrl">', startIndex+1);
+                var conjIndex = text.indexOf('Conjugation of <span lang="ru" class="Cyrl">', startIndex+1);
+                const bigNum = 100000000;
+                if (declIndex == -1) declIndex = bigNum;
+                if (conjIndex == -1) conjIndex = bigNum;
+                if (declIndex < conjIndex) {
+                    startIndex = declIndex;
+                } else if (conjIndex < declIndex) {
+                    startIndex = conjIndex;
+                } else {
+                    break;
+                }
+                matchingTableIndices.push(startIndex);
+            };
+            
+            // Step 2: Extract the HTML of the corresponding tables
+            var matchingTables = [];
+            for (var i = 0; i < matchingTableIndices.length; i++) {
+                const index = matchingTableIndices[i];
                 const remainder = text.substring(index);
                 const tableStart = remainder.indexOf("<table");
                 const tableEnd = remainder.indexOf("</table>");
                 const tableHtml = remainder.substring(tableStart, tableEnd + 8);
-                showDeclensionTable(json.parse.title, tableHtml);
+                // The right table will actually contain our word
+                const normalisedTable = normaliseRussian(tableHtml);
+                const normalisedTerm = normaliseRussian(term);
+                if (normalisedTable.indexOf(normalisedTerm) != -1) {
+                    matchingTables.push(tableHtml);
+                }
+            }
+
+            if (matchingTables.length > 0) {
+                // Plan A: We have a declension table right here
+                showDeclensionTable(json.parse.title, matchingTables[0]);
                 updateStatusText(ST_DONE);
             } else {
                 // Plan B: Is this a form of a root word that is documented in another page?
@@ -322,16 +348,18 @@ Changelog:
         function highlightSearchTerm() {
             const ruSpans = document.getElementsByClassName("Cyrl");
             // Double dots are often omitted on Russian "ё" so treat it the same as "е"
-            const term = getSearchTerm().replace("ё", "е").normalize('NFD');
+            const term = normaliseRussian(getSearchTerm());
             for (var i = 0; i < ruSpans.length; i++) {
                 const s = ruSpans[i];
-                const content = s.innerText.trim().replace("ё", "е");
-                const normalised = content.normalize('NFD');
-                const noAccent = normalised.replace(/\u0301/g, "");
-                if (noAccent == term) {
+                const content = normaliseRussian(s.innerText);
+                if (content == term) {
                     s.parentElement.classList.add("match");
                 }
             }
+        }
+
+        function normaliseRussian(word) {
+            return word.trim().replace("ё", "е").normalize('NFD').replace(/\u0301/g, "");
         }
 
         function getSearchTerm() {

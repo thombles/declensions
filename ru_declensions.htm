@@ -36,6 +36,9 @@ Changelog:
             Support for back/forward navigation between searches
 2018-07-18  Make the all-important pronouns table work
             Make form-of link following more flexible
+2018-07-25  Use localeCompare() for case-insensitive Russian comparison
+            Parse the HTML as a tree - mostly remove Zalgo
+            Always prefer earlier definitions over later ones
 -->
 
 <!doctype html>
@@ -134,14 +137,14 @@ Changelog:
         var searchCache = {};
         var pageCache = {};
 
-        var hashCheck = function() {
+        const hashCheck = function() {
             var initialTerm = null;
             const queryMatch = window.location.href.match(/\?q=([^#]+)/);
             // Look for ?q=слово
             if (queryMatch) {
                 initialTerm = decodeURIComponent(queryMatch[1]);
             }
-            // Look for #слово (doesn't hurt to have options)
+            // Look for #слово (preferred usage, takes priority)
             if (window.location.hash) {
                 initialTerm = decodeURIComponent(window.location.hash.substr(1));
             }
@@ -236,59 +239,132 @@ Changelog:
             pageCache[term] = json;
 
             const text = json.parse.text["*"];
+            const title = json.parse.title;
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, "text/html");
+            if (!doc) {
+                console.log("Could not parse returned HTML");
+                error();
+            }
             
-            // Invoke Zalgo. The <center> cannot hold
-            // Step 1: Get an array of offsets after which we should find a promising <table>...</table>
-            var matchingTableIndices = [];
-            var startIndex = 0;
-            while (true) {
-                var declIndex = text.indexOf('Declension of <b lang="ru" class="Cyrl">', startIndex+1);
-                var conjIndex = text.indexOf('Conjugation of <span lang="ru" class="Cyrl">', startIndex+1);
-                var pronounIndex = text.indexOf('Declension of Russian personal pronouns', startIndex+1);
-                const bigNum = 100000000;
-                if (declIndex == -1) declIndex = bigNum;
-                if (conjIndex == -1) conjIndex = bigNum;
-                if (pronounIndex == -1) pronounIndex = bigNum;
-                startIndex = Math.min(declIndex, conjIndex, pronounIndex);
-                if (startIndex == bigNum) {
+            // Find the "Russian" <h2>
+            const headlines = doc.getElementsByClassName("mw-headline");
+            var currentElement = null;
+            for (let i = 0; i < headlines.length; i++) {
+                if (headlines[i].innerText.trim() == "Russian") {
+                    currentElement = headlines[i].parentElement;
+                }
+            }
+            if (!currentElement || currentElement.tagName != "H2") {
+                console.log("Could not find initial <h2>");
+                error();
+                return;
+            }
+            
+            // Walk along all its siblings and their children until we find another <h2> or run out of siblings
+            var foundAction = false;
+            while (!foundAction) {
+                currentElement = currentElement.nextElementSibling;
+                if (!currentElement || currentElement.tagName == "h2") {
                     break;
                 }
-                matchingTableIndices.push(startIndex);
-            }
-            
-            // Step 2: Extract the HTML of the corresponding tables
-            var matchingTables = [];
-            for (var i = 0; i < matchingTableIndices.length; i++) {
-                const index = matchingTableIndices[i];
-                const remainder = text.substring(index);
-                const tableStart = remainder.indexOf("<table");
-                const tableEnd = remainder.indexOf("</table>");
-                const tableHtml = remainder.substring(tableStart, tableEnd + 8);
-                // The right table will actually contain our word
-                const normalisedTable = normaliseRussian(tableHtml);
-                const normalisedTerm = normaliseRussian(term);
-                if (normalisedTable.indexOf(normalisedTerm) != -1) {
-                    matchingTables.push(tableHtml);
-                }
+                foundAction = recursiveSearch(currentElement, title, searchSingleElement);
             }
 
-            if (matchingTables.length > 0) {
-                // Plan A: We have a declension table right here
-                showDeclensionTable(json.parse.title, matchingTables[0]);
-                updateStatusText(ST_DONE);
-            } else {
-                // Plan B: Is this a form of a root word that is documented in another page?
-                // Sometimes there are multiple... often they're different declensions the same root word
-                // Just take the first one
-                var redirects = text.match(/<span class="form-of-definition-link"><i class="Cyrl mention" lang="ru"><a href="\/wiki\/([^#]+)/) || [];
-                redirects.push(...(text.match(/form[- ]of.*?<span class="Cyrl" lang="ru"><a href="\/wiki\/([^#]+)/) || []))
-                if (redirects.length > 0) {
-                    requestDefinitionPage(redirects[1]);
-                } else {
-                    // We have actually failed
-                    updateStatusText(ST_NOT_FOUND);
+            if (!foundAction) {
+                console.log("Failed to find an action in the Russian section");
+                updateStatusText(ST_NOT_FOUND);
+            }
+        }
+
+        // Generalised recursive node search
+        function recursiveSearch(top, title, task) {
+            if (task(top, title)) {
+                return true;
+            }
+            for (let i = 0; i < top.childNodes.length; i++) {
+                if (recursiveSearch(top.childNodes[i], title, task)) {
+                    return true;
                 }
             }
+            return false;
+        }
+
+        // Poke around in a single element to see if it has anything interesting - a link to follow, or a matching table
+        function searchSingleElement(el, title) {
+            return checkFormOfLinkType1(el) ||
+                checkFormOfLinkType2(el) ||
+                checkInflectionTable(el, title);
+        }
+
+        // <span class="form-of-definition-link">
+        // e.g. словам
+        function checkFormOfLinkType1(el) {;
+            if (el.tagName == "SPAN" && el.classList.contains("form-of-definition-link")) {
+                // The <a> should be inside somewhere
+                var titleToFollow = null;
+                recursiveSearch(el, null, (el) => {
+                    if (el.tagName == "A") {
+                        const match = el.href.match(/\/wiki\/([^#]+)/);
+                        if (match) {
+                            titleToFollow = decodeURIComponent(match[1]);
+                        }
+                    }
+                });
+                if (titleToFollow) {
+                    requestDefinitionPage(titleToFollow);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // form of.*?<span class="Cyrl" lang="ru"
+        // e.g. всё
+        function checkFormOfLinkType2(el) {
+            if (!el.innerText) return false;
+            const needle = "form of";
+            const haystack = el.innerText.trim();
+            const index = haystack.indexOf(needle);
+            if ((index != -1) && (index == haystack.length - needle.length) && el.nextElementSibling) { // i.e. endsWith()
+                // Try to find an <a> in the next sibling
+                var titleToFollow = null;
+                recursiveSearch(el.nextElementSibling, null, (el) => {
+                    if (el.tagName == "A") {
+                        const match = el.href.match(/\/wiki\/([^#]+)/);
+                        if (match) {
+                            titleToFollow = decodeURIComponent(match[1]);
+                        }
+                    }
+                });
+                if (titleToFollow) {
+                    requestDefinitionPage(titleToFollow);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // <table class="inflection-table">
+        // e.g. слово
+        function checkInflectionTable(el, title) {
+            // Happily all the declension/conjugation tables seem to have the class "inflection-table"
+            // If we find such a table and it contains a span matching our search term, display this table
+            // More relevant ones seem to be higher in the wiktionary article so rely on that for now
+            if (el.tagName == "TABLE" && el.classList.contains("inflection-table")) {
+                var tableMatchesSearch = false;
+                const term = getSearchTerm();
+                recursiveSearch(el, null, (el) => {
+                    if (el.tagName == "SPAN" && compareRussian(el.innerText, term)) {
+                        tableMatchesSearch = true;
+                    }
+                });
+                if (tableMatchesSearch) {
+                    showDeclensionTable(title, el.outerHTML);
+                    return true;
+                }
+            }
+            return false;
         }
 
         function requestDefinitionPage(title) {
@@ -321,6 +397,7 @@ Changelog:
             r.innerHTML += html;
 
             highlightSearchTerm();
+            updateStatusText(ST_DONE);
         }
 
         // If we fail provide a link to the raw search results
@@ -330,6 +407,7 @@ Changelog:
         }
         
         // Eliminate symbols and links and things that we don't want from the retrieved table
+        // Minor Zalgo here but honestly this would be super fiddly using the DOM
         function cleanUpRawTable(html) {
             // Strip all links
             html = html.replace(/<a[^>]*>/g, "");
@@ -348,26 +426,31 @@ Changelog:
             return html;
         }
 
-        // Try to find and highlight the term we searched for, ignoring emphasis accents
+        // Try to find and highlight the term we searched for
         function highlightSearchTerm() {
             const ruSpans = document.getElementsByClassName("Cyrl");
-            // Double dots are often omitted on Russian "ё" so treat it the same as "е"
-            const term = normaliseRussian(getSearchTerm());
-            for (var i = 0; i < ruSpans.length; i++) {
+            const term = getSearchTerm();
+            for (let i = 0; i < ruSpans.length; i++) {
                 const s = ruSpans[i];
-                const content = normaliseRussian(s.innerText);
-                if (content == term) {
+                if (compareRussian(s.innerText, term)) {
                     s.parentElement.classList.add("match");
                 }
             }
         }
 
-        function normaliseRussian(word) {
-            return word.trim().replace("ё", "е").normalize('NFD').replace(/\u0301/g, "");
+        // Return true if the two words are the same
+        // - trim and case-insensitive
+        // - ignore accents on letters e.g. каза́лось
+        // - insensitive to ё vs е
+        function compareRussian(word1, word2) {
+            word1 = word1.trim();
+            word2 = word2.trim();
+            return word1.localeCompare(word2, "ru", {"sensitivity": "base"}) == 0;
         }
 
+        // Get what the user actually typed
         function getSearchTerm() {
-            return document.getElementById("search_term").value;
+            return document.getElementById("search_term").value.trim();
         }
 
         function updateStatusText(text) {

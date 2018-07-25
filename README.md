@@ -4,7 +4,7 @@
 
 Quickly locate declension and conjugation tables for Russian words. The data comes entirely via the English Wiktionary API. Your browser makes requests directly to Wiktionary when you perform a search.
 
-The algorithm to locate the tables is pretty dodgy and may break. If you notice it failing on any words that it should be able to pick up, please open an issue.
+If you notice an error on any tables that it should reasonably be able to pick up, please open an issue.
 
 ## Usage
 

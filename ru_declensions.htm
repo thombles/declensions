@@ -254,7 +254,7 @@ Changelog:
                     currentElement = headlines[i].parentElement;
                 }
             }
-            if (!currentElement || currentElement.tagName != "H2") {
+            if (!currentElement || safeToUpper(currentElement.tagName) != "H2") {
                 console.log("Could not find initial <h2>");
                 error();
                 return;
@@ -264,7 +264,7 @@ Changelog:
             var foundAction = false;
             while (!foundAction) {
                 currentElement = currentElement.nextElementSibling;
-                if (!currentElement || currentElement.tagName == "h2") {
+                if (!currentElement || safeToUpper(currentElement.tagName) == "H2") {
                     break;
                 }
                 foundAction = recursiveSearch(currentElement, title, searchSingleElement);
@@ -299,11 +299,11 @@ Changelog:
         // <span class="form-of-definition-link">
         // e.g. словам
         function checkFormOfLinkType1(el) {;
-            if (el.tagName == "SPAN" && el.classList.contains("form-of-definition-link")) {
+            if (safeToUpper(el.tagName) == "SPAN" && el.classList.contains("form-of-definition-link")) {
                 // The <a> should be inside somewhere
                 var titleToFollow = null;
                 recursiveSearch(el, null, (el) => {
-                    if (el.tagName == "A") {
+                    if (safeToUpper(el.tagName) == "A") {
                         const match = el.href.match(/\/wiki\/([^#]+)/);
                         if (match) {
                             titleToFollow = decodeURIComponent(match[1]);
@@ -329,7 +329,7 @@ Changelog:
                 // Try to find an <a> in the next sibling
                 var titleToFollow = null;
                 recursiveSearch(el.nextElementSibling, null, (el) => {
-                    if (el.tagName == "A") {
+                    if (safeToUpper(el.tagName) == "A") {
                         const match = el.href.match(/\/wiki\/([^#]+)/);
                         if (match) {
                             titleToFollow = decodeURIComponent(match[1]);
@@ -350,11 +350,11 @@ Changelog:
             // Happily all the declension/conjugation tables seem to have the class "inflection-table"
             // If we find such a table and it contains a span matching our search term, display this table
             // More relevant ones seem to be higher in the wiktionary article so rely on that for now
-            if (el.tagName == "TABLE" && el.classList.contains("inflection-table")) {
+            if (safeToUpper(el.tagName) == "TABLE" && el.classList.contains("inflection-table")) {
                 var tableMatchesSearch = false;
                 const term = getSearchTerm();
                 recursiveSearch(el, null, (el) => {
-                    if (el.tagName == "SPAN" && compareRussian(el.innerText, term)) {
+                    if (safeToUpper(el.tagName) == "SPAN" && compareRussian(el.innerText, term)) {
                         tableMatchesSearch = true;
                     }
                 });
@@ -483,6 +483,13 @@ Changelog:
 
         function clearResults() {
             document.getElementById("results").innerHTML = "";
+        }
+
+        function safeToUpper(text) {
+            if (text != null && text.toUpperCase) {
+                return text.toUpperCase();
+            }
+            return text;
         }
     </script>
 

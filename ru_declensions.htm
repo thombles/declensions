@@ -44,6 +44,8 @@ Changelog:
 2018-07-25  Use localeCompare() for case-insensitive Russian comparison
             Parse the HTML as a tree - mostly remove Zalgo
             Always prefer earlier definitions over later ones
+2018-07-26  Move charset to top of document to avoid unneeded reloads
+            Fix tagName wrong case - now always case-insensitive
 -->
         <style type="text/css">
             body {
@@ -130,7 +132,7 @@ Changelog:
         const TITLE = "Russian Declension-o-matic";
 
         // Caches that will last for the lifetime of this page
-        // This will neatly handle repeated lookups if the user navigates тут и там
+        // This will neatly handle repeated lookups if the user navigates туда-сюда
         // But any issues can be fixed with a refresh
         var queryId = 0; // maintain consistency across JSONP requests. A bit ugly but it'll work.
         var searchCache = {};
@@ -276,7 +278,7 @@ Changelog:
             }
         }
 
-        // Generalised recursive node search
+        // Generalised depth first node search. Stop when false is returned.
         function recursiveSearch(top, title, task) {
             if (task(top, title)) {
                 return true;

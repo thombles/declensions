@@ -46,6 +46,7 @@ Changelog:
             Always prefer earlier definitions over later ones
 2018-07-26  Move charset to top of document to avoid unneeded reloads
             Fix tagName wrong case - now always case-insensitive
+2018-08-01  Use 25 search results for better chance of finding root word
 -->
         <style type="text/css">
             body {
@@ -208,7 +209,7 @@ Changelog:
             }
 
             // Out of those left, which index matches our search term most closely?
-            // For this application we want the title that is most similar to our search term, out of the top 10 results
+            // For this application we want the title that is most similar to our search term, out of the top results
             // Root words are usually pretty similar to their declensions so this should help
             var bestResult = 0;
             var bestDistance = 1000;

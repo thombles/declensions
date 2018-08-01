@@ -463,7 +463,7 @@ Changelog:
         }
 
         function makeSearchApiUrl(term, callback) {
-            return `https://en.wiktionary.org/w/api.php?action=query&list=search&srsearch=${term}&srlimit=10&callback=${callback}&format=json`;
+            return `https://en.wiktionary.org/w/api.php?action=query&list=search&srsearch=${term}&srlimit=25&callback=${callback}&format=json`;
         }
 
         function makeGetPageUrl(title, callback) {

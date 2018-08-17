@@ -48,6 +48,7 @@ Changelog:
             Fix tagName wrong case - now always case-insensitive
 2018-08-01  Use 25 search results for better chance of finding root word
             Update algorithm to capture multiple links and tables
+2018-08-17  Favour earlier form-of links over later (мнению went to English)
 -->
         <style type="text/css">
             body {
@@ -368,7 +369,7 @@ Changelog:
                 recursiveSearch(el, (el) => {
                     if (safeToUpper(el.tagName) == "A") {
                         const match = el.href.match(/\/wiki\/([^#]+)/);
-                        if (match) {
+                        if (match && !titleToFollow) { // take first link, not last
                             titleToFollow = decodeURIComponent(match[1]);
                         }
                     }

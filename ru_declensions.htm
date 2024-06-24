@@ -326,14 +326,14 @@ Changelog:
             pageCache[title] = json;
             
             // Find the "Russian" <h2>
-            const headlines = doc.getElementsByClassName("mw-headline");
+            const headlines = doc.getElementsByClassName("mw-heading");
             var currentElement = null;
             for (let i = 0; i < headlines.length; i++) {
-                if (headlines[i].innerText.trim() == "Russian") {
-                    currentElement = headlines[i].parentElement;
+                if (headlines[i].firstElementChild.innerHTML == "Russian") {
+                    currentElement = headlines[i];
                 }
             }
-            if (!currentElement || safeToUpper(currentElement.tagName) != "H2") {
+            if (!currentElement || safeToUpper(currentElement.firstElementChild.tagName) != "H2") {
                 ctx.error = "Could not find initial <h2>";
                 return;
             }

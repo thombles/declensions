@@ -5,11 +5,14 @@
         <meta charset="UTF-8">
 <!--
 ****               RUSSIAN DECLENSION-O-MATIC                ****
-****        Thomas Karpiniec <tk@1.21jiggawatts.net>         ****
+****      Thomas Karpiniec <tom.karpiniec@outlook.com>       ****
 ****  Retrieve grammar tables from Wiktionary automatically  ****
 
-MIT Licensed:
-Copyright (c) 2018 Thomas Karpiniec
+MIT Licensed
+Copyright (c) 2024 by contributors:
+- Thomas Karpiniec
+- Rémi Slysz
+
 Copyright (c) 2013 Ramesh Nair (Levenshtein algorithm)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -49,6 +52,8 @@ Changelog:
 2018-08-01  Use 25 search results for better chance of finding root word
             Update algorithm to capture multiple links and tables
 2018-08-17  Favour earlier form-of links over later (мнению went to English)
+2024-06-25  Fix for for the Wiktionary changing the header class name
+            (Thanks to Rémi Slysz)
 -->
         <style type="text/css">
             body {
@@ -326,14 +331,14 @@ Changelog:
             pageCache[title] = json;
             
             // Find the "Russian" <h2>
-            const headlines = doc.getElementsByClassName("mw-headline");
+            const headlines = doc.getElementsByClassName("mw-heading");
             var currentElement = null;
             for (let i = 0; i < headlines.length; i++) {
-                if (headlines[i].innerText.trim() == "Russian") {
-                    currentElement = headlines[i].parentElement;
+                if (headlines[i].firstElementChild.innerHTML == "Russian") {
+                    currentElement = headlines[i];
                 }
             }
-            if (!currentElement || safeToUpper(currentElement.tagName) != "H2") {
+            if (!currentElement || safeToUpper(currentElement.firstElementChild.tagName) != "H2") {
                 ctx.error = "Could not find initial <h2>";
                 return;
             }
